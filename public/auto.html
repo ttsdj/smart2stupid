@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>smart2stupid · agent 对话时间线</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    .timeline { max-width: 860px; margin: 0 auto; padding: 8px 0 40px; }
+    .tl-group { position: relative; padding-left: 20px; margin: 0 0 18px; }
+    .tl-divider { margin: 18px 0 12px; padding: 6px 12px; background: #1a2129; border: 1px solid var(--border); border-radius: 8px; color: var(--yellow); font-weight: 600; font-size: 13px; }
+    .bubble { margin: 8px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); max-width: 90%; }
+    .bubble.codex { background: #14202e; border-left: 3px solid var(--accent); }
+    .bubble.claude { background: #18231a; border-left: 3px solid var(--green); margin-left: auto; }
+    .bubble .head { display: flex; gap: 8px; align-items: baseline; font-size: 12px; margin-bottom: 4px; }
+    .bubble .who { font-weight: 700; }
+    .bubble.codex .who { color: var(--accent); }
+    .bubble.claude .who { color: var(--green); }
+    .bubble .tag { color: var(--dim); font-size: 11px; }
+    .bubble .ts { margin-left: auto; color: var(--dim); font-size: 11px; font-family: var(--mono); }
+    .bubble .body { font-size: 13px; white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow-y: auto; }
+    .bubble .body.cmd { font-family: var(--mono); font-size: 11px; color: #a8c7ec; }
+    .bubble .body.stderr { color: var(--red); }
+    .bubble .body.result { border: 1px solid var(--green); border-radius: 6px; padding: 8px; background: #12251c; }
+    .tool-chip { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #1d3350; color: #7db4f5; margin: 2px 4px 2px 0; }
+    .status-chip { display: inline-block; font-size: 12px; padding: 2px 10px; border-radius: 10px; font-weight: 600; }
+    .status-chip.running, .status-chip.starting { color: var(--accent); }
+    .status-chip.completed { color: var(--green); }
+    .status-chip.failed, .status-chip.cancelled, .status-chip.timeout { color: var(--red); }
+    .verdict-banner { margin: 12px 0; padding: 10px 14px; border-radius: 8px; font-weight: 700; text-align: center; }
+    .verdict-banner.pass { background: #12251c; color: var(--green); border: 1px solid var(--green); }
+    .verdict-banner.partial { background: #2a2110; color: var(--yellow); border: 1px solid var(--yellow); }
+    .verdict-banner.fail { background: #2a1414; color: var(--red); border: 1px solid var(--red); }
+    .empty-hint { color: var(--dim); text-align: center; padding: 40px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>smart<span class="dim">2</span>stupid <span class="tagline" style="font-weight:400;font-size:13px;color:var(--dim)">· agent 对话时间线</span></h1>
+    </div>
+    <a href="/" style="color:var(--accent);font-size:13px">← 返回 Web UI</a>
+  </header>
+
+  <main>
+    <div class="panel">
+      <h2>启动一次自动闭环</h2>
+      <label>任务描述 <span class="hint">—— smart 端据此出 plan，stupid 端执行</span></label>
+      <textarea id="auto-prompt" rows="3" placeholder="写一个能统计目录下各文件行数的命令行工具"></textarea>
+      <div class="row fields">
+        <div>
+          <label>工作目录</label>
+          <input id="auto-workdir" placeholder="d:/path/to/repo">
+        </div>
+        <div>
+          <label>smart 端（想 + 审核）</label>
+          <select id="auto-smart"></select>
+        </div>
+        <div>
+          <label>stupid 端（执行）</label>
+          <select id="auto-stupid"></select>
+        </div>
+      </div>
+      <div class="row">
+        <button id="btn-auto-start" class="primary">▶ 启动自动闭环</button>
+        <span id="auto-status" class="hint"></span>
+      </div>
+    </div>
+
+    <div id="timeline" class="timeline">
+      <div class="empty-hint">尚未开始。填好上面的表单，点「启动自动闭环」。</div>
+    </div>
+  </main>
+
+  <script src="/auto.js"></script>
+</body>
+</html>

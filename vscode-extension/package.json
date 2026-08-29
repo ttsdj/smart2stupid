@@ -1,0 +1,73 @@
+{
+  "name": "smart2stupid-ui",
+  "displayName": "smart2stupid",
+  "description": "Codex 负责策划和审核，Claude Code 负责执行；VS Code 内结构化实时展示，无需 Web UI",
+  "version": "0.3.1",
+  "publisher": "local",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "files": ["dist/**", "README.md"],
+  "contributes": {
+    "commands": [
+      { "command": "smart2stupid.open", "title": "smart2stupid: 打开 Claude 结构化执行面板" },
+      { "command": "smart2stupid.stopExecution", "title": "smart2stupid: 停止当前 Claude 执行" },
+      { "command": "smart2stupid.openClaudeSession", "title": "smart2stupid: 在 Claude Code 中打开当前会话" },
+      { "command": "smart2stupid.newClaudeSession", "title": "smart2stupid: 下一轮新建 Claude 会话" },
+      { "command": "smart2stupid.extendIteration", "title": "smart2stupid: 追加一轮执行" },
+      { "command": "smart2stupid.legacyStart", "title": "smart2stupid: 启动旧版 Web UI（备用）" },
+      { "command": "smart2stupid.legacyOpen", "title": "smart2stupid: 打开旧版 Web UI（备用）" },
+      { "command": "smart2stupid.legacyStop", "title": "smart2stupid: 停止旧版 Web UI" }
+    ],
+    "configuration": {
+      "title": "smart2stupid",
+      "properties": {
+        "smart2stupid.projectRoot": {
+          "type": "string",
+          "default": "d:/00.project/smart2stupid",
+          "description": "smart2stupid 项目根目录（含 package.json 与 src/）"
+        },
+        "smart2stupid.startCommand": {
+          "type": "string",
+          "default": "npm run dev",
+          "description": "启动命令（在 projectRoot 下执行，Windows 建议保持 npm run dev）"
+        },
+        "smart2stupid.port": {
+          "type": "number",
+          "default": 3747,
+          "description": "smart2stupid 服务端口"
+        },
+        "smart2stupid.token": {
+          "type": "string",
+          "default": "",
+          "description": "访问 token（扩展自行启动服务时自动捕获；外部启动的服务请粘贴完整访问地址后自动解析，通常无需手填）"
+        },
+        "smart2stupid.autoOpenExecutionPanel": {
+          "type": "boolean",
+          "default": true,
+          "description": "检测到 $smart2stupid 启动 Claude 后，自动在主编辑区打开结构化执行面板"
+        },
+        "smart2stupid.pollIntervalMs": {
+          "type": "number",
+          "default": 700,
+          "minimum": 300,
+          "description": "结构化执行面板读取本地事件记录的刷新间隔"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.5.0",
+    "@vscode/vsce": "^3.0.0"
+  }
+}

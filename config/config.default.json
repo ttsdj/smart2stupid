@@ -1,0 +1,139 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 3747,
+    "openBrowser": true,
+    "allowedWorkdirs": []
+  },
+  "smart": {
+    "provider": "openai-compat",
+    "maxRounds": 5,
+    "temperature": 0.4,
+    "timeoutMs": 120000,
+    "maxIterations": 3,
+    "review": { "enabled": true }
+  },
+  "providers": {
+    "openai-compat": {
+      "type": "openai-compatible",
+      "baseURL": "https://api.openai.com/v1",
+      "apiKeyEnv": "OPENAI_API_KEY",
+      "model": "gpt-4o-mini",
+      "timeoutMs": 120000
+    },
+    "playwright-web-chat": {
+      "type": "playwright-web-chat",
+      "url": "https://chatgpt.com/",
+      "headless": true,
+      "profileDir": null,
+      "inputSelector": "textarea, [contenteditable='true']",
+      "sendSelector": "button[data-testid='send-button'], button[aria-label*='Send']",
+      "responseSelector": "[data-message-author-role='assistant']"
+    },
+    "codex-cli": {
+      "type": "cli-agent",
+      "command": "codex",
+      "args": ["exec", "--output-last-message", "text", "--skip-git-repo-check", "{promptArg}"],
+      "model": "默认（codex login 的默认模型）",
+      "timeoutMs": 300000,
+      "installHint": "npm install -g @openai/codex  然后运行 codex login（走 ChatGPT 账号登录，使用订阅额度）"
+    },
+    "claude-cli": {
+      "type": "cli-agent",
+      "command": "claude",
+      "args": ["-p", "--max-budget-usd", "0.5", "--model", "{model}", "{promptArg}"],
+      "model": "claude-sonnet-5",
+      "timeoutMs": 300000,
+      "installHint": "npm install -g @anthropic-ai/claude-code"
+    },
+    "mock": {
+      "type": "mock",
+      "replies": []
+    }
+  },
+  "stupid": {
+    "executor": "claude",
+    "model": "claude-haiku-4-5-20251001",
+    "allowedTools": "Read,Glob,Grep,Edit,Write,NotebookEdit,Bash,WebFetch,WebSearch",
+    "disallowedTools": [
+      "Bash(rm *-r*)",
+      "Bash(rm *-R*)",
+      "Bash(rm *--recursive*)",
+      "Bash(*Remove-Item *-Recurse*)",
+      "Bash(*rmdir */s*)",
+      "Bash(*rd */s*)",
+      "Bash(*del */s*)",
+      "Bash(*erase */s*)",
+      "Bash(*find *-delete*)",
+      "Bash(*git clean *-f*)",
+      "Bash(*shutil.rmtree*)",
+      "Bash(*fs.rmSync*recursive*)",
+      "Bash(*fs.rm *recursive*)"
+    ],
+    "autoApprove": true,
+    "budgetUsd": 5,
+    "timeoutMs": 1800000
+  },
+  "executors": {
+    "claude": {
+      "enabled": true,
+      "command": "claude",
+      "args": ["-p", "--verbose", "--output-format", "stream-json", "--include-partial-messages", "--permission-mode", "bypassPermissions", "--model", "{model}", "--allowedTools", "{allowedTools}", "--disallowedTools", "{disallowedTools}", "--add-dir", "{workdir}", "--max-budget-usd", "{budget}", "{sessionArgs}", "{promptArg}"],
+      "autoApproveFlag": null,
+      "env": {
+        "CLAUDE_CODE_ENTRYPOINT": "smart2stupid"
+      },
+      "timeoutMs": 1800000
+    },
+    "codex": {
+      "enabled": true,
+      "command": "codex",
+      "args": ["exec", "--json", "--full-auto", "--sandbox", "workspace-write", "--skip-git-repo-check", "-C", "{workdir}", "-m", "{model}", "{promptArg}"],
+      "autoApproveFlag": null,
+      "installHint": "npm install -g @openai/codex  然后运行 codex login 或配置 OPENAI_API_KEY",
+      "env": {},
+      "timeoutMs": 1800000
+    },
+    "qwen": {
+      "enabled": true,
+      "command": "qwen",
+      "args": ["-p", "--output-format", "stream-json", "--model", "{model}", "--allowedTools", "{allowedTools}", "--add-dir", "{workdir}", "{autoApproveFlags}", "{promptArg}"],
+      "autoApproveFlag": "--dangerously-skip-permissions",
+      "installHint": "npm 版需要 Node>=22（本机为 20）。推荐 Windows 独立安装器：powershell -ExecutionPolicy ByPass -c \"irm https://qwen-code-assets.oss-cn-hangzhou.aliyuncs.com/installation/install-qwen-standalone.ps1 | iex\"",
+      "env": {},
+      "timeoutMs": 1800000
+    },
+    "echo": {
+      "enabled": true,
+      "command": "cmd",
+      "args": ["/c", "echo", "[echo-executor]", "已收到任务，将执行:", "{promptArg}"],
+      "autoApproveFlag": null,
+      "installHint": null,
+      "env": {},
+      "timeoutMs": 60000
+    },
+    "chatgpt-desktop": {
+      "enabled": true,
+      "command": "chatgpt",
+      "args": [],
+      "autoApproveFlag": null,
+      "installHint": "winget install --id 9PLM9XGG6VKS -s msstore",
+      "env": {},
+      "timeoutMs": 1800000,
+      "chatgpt": {
+        "installPaths": ["D:/app/ChatGPT.exe"],
+        "port": 9224,
+        "existingApp": "error",
+        "closeOnFinish": true,
+        "launchTimeoutMs": 30000,
+        "selectors": {
+          "input": "div[contenteditable='true'], #prompt-textarea, textarea",
+          "send": "button[data-testid='send-button'], button[aria-label*='Send']",
+          "response": "[data-message-author-role='assistant']",
+          "runningIndicator": "button[data-testid='stop-button'], button[aria-label*='Stop']",
+          "idleStableSeconds": 20
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "smart2stupid",
+  "version": "0.1.0",
+  "description": "smart 端出脑（提示词优化+plan），stupid 端出力（廉价 CLI agent 执行），两端热插拔",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "auto": "tsx src/cli.ts",
+    "delegate": "tsx src/delegate.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/delegation.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "playwright": "^1.62.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

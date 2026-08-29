@@ -1,0 +1,6 @@
+interface:
+  display_name: "smart2stupid"
+  short_description: "Codex plans and audits while Claude Code implements"
+  default_prompt: "Use $smart2stupid to clarify this task, delegate implementation to Claude Code, and audit the result."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>smart2stupid — smart 出脑，stupid 出力</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>smart<span class="dim">2</span>stupid</h1>
+      <p class="tagline">smart 端出脑（提示词优化 + plan）· stupid 端出力（廉价 CLI agent 执行）</p>
+    </div>
+    <nav id="progress" class="progress">
+      <span class="step" data-step="0"><i>①</i> 新任务</span>
+      <span class="step" data-step="1"><i>②</i> 追问澄清</span>
+      <span class="step" data-step="2"><i>③</i> brief 审阅</span>
+      <span class="step" data-step="3"><i>④</i> 执行监控</span>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ① 新任务 -->
+    <section id="view-new" class="view">
+      <div class="grid">
+        <div class="panel">
+          <h2>新任务</h2>
+          <label>粗糙提示词 <span class="hint">—— 怎么想就怎么写，剩下的交给 smart 端</span></label>
+          <textarea id="new-prompt" rows="6" placeholder="例：帮我搞个待办应用"></textarea>
+          <label>工作目录 <span class="hint">—— 执行 agent 在此目录干活</span></label>
+          <div class="row">
+            <input id="new-workdir" placeholder="d:\path\to\repo" value="">
+            <button id="btn-checkdir" class="ghost">验证</button>
+          </div>
+          <div id="dir-check-result" class="hint"></div>
+          <div class="row fields">
+            <div>
+              <label>smart provider</label>
+              <select id="sel-provider"></select>
+            </div>
+            <div>
+              <label>stupid executor</label>
+              <select id="sel-executor"></select>
+            </div>
+            <div>
+              <label>执行模型 <span class="hint">（便宜档）</span></label>
+              <input id="exec-model">
+            </div>
+          </div>
+          <div id="executor-status" class="hint"></div>
+          <button id="btn-create" class="primary">创建任务，开始追问 →</button>
+        </div>
+        <div class="panel">
+          <h2>历史任务 <button id="btn-refresh-tasks" class="ghost small">刷新</button></h2>
+          <ul id="task-list" class="task-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ② 追问澄清 -->
+    <section id="view-clarify" class="view hidden">
+      <div class="task-head">
+        <h2 id="clarify-title">追问澄清</h2>
+        <div class="task-meta" id="clarify-meta"></div>
+      </div>
+      <div id="clarify-body" class="panel">
+        <div id="round-loading" class="loading hidden">🤔 smart 模型思考中…</div>
+        <div id="round-questions"></div>
+        <div class="row">
+          <button id="btn-submit-round" class="primary">提交本轮（可部分留空）</button>
+          <button id="btn-force-converge" class="ghost hidden">跳过追问，直接生成 brief</button>
+        </div>
+      </div>
+      <details class="panel" id="answered-details">
+        <summary>已决决策（<span id="answered-count">0</span>）</summary>
+        <div id="answered-list"></div>
+      </details>
+      <details class="panel smartlog" id="smart-log-wrap-clarify">
+        <summary>📜 smart 端调用日志（实时：模型调用命令与原始输出）</summary>
+        <pre id="smart-log-clarify" class="log"></pre>
+      </details>
+    </section>
+
+    <!-- ③ brief 审阅 -->
+    <section id="view-review" class="view hidden">
+      <div class="task-head">
+        <h2>brief 审阅 —— 达成共识前不会开始执行</h2>
+        <div class="task-meta" id="review-meta"></div>
+      </div>
+      <div class="panel">
+        <div class="row">
+          <button id="btn-edit-brief" class="ghost">编辑</button>
+          <button id="btn-save-brief" class="ghost hidden">保存修改</button>
+          <button id="btn-confirm-exec" class="primary">✅ 确认共识，开始执行 →</button>
+        </div>
+        <div id="brief-render" class="brief"></div>
+        <textarea id="brief-editor" class="hidden" rows="24"></textarea>
+      </div>
+    </section>
+
+    <!-- ④ 执行监控 -->
+    <section id="view-exec" class="view hidden">
+      <div class="task-head">
+        <h2>执行监控</h2>
+        <div class="task-meta" id="exec-meta"></div>
+      </div>
+      <div class="panel">
+        <div id="exec-preview"></div>
+        <div id="exec-status" class="exec-status">—</div>
+        <div id="exec-tools" class="tools"></div>
+        <div id="exec-log" class="log"></div>
+        <details id="exec-stderr-wrap" class="hidden">
+          <summary>stderr</summary>
+          <pre id="exec-stderr" class="log stderr"></pre>
+        </details>
+        <div id="exec-result" class="result hidden"></div>
+        <div class="row">
+          <button id="btn-cancel-exec" class="danger hidden">取消执行</button>
+          <button id="btn-exec-done" class="ghost hidden">查看 brief / 返回</button>
+        </div>
+      </div>
+
+      <div id="review-panel" class="panel hidden">
+        <h2>执行结果审核 <span id="review-verdict" class="verdict"></span></h2>
+        <div id="review-state" class="hint"></div>
+        <table id="review-items" class="review-table">
+          <thead><tr><th>验收标准</th><th>结果</th><th>证据 / 问题</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="review-summary" class="brief"></div>
+        <div id="review-fixes"></div>
+        <div id="review-history" class="hint"></div>
+        <div class="row">
+          <button id="btn-review-iterate" class="primary hidden">生成修正指令并重跑 →</button>
+          <button id="btn-review-finish" class="ghost hidden">结束任务</button>
+          <button id="btn-review-retry" class="ghost hidden">重试审核</button>
+        </div>
+      </div>
+      <details class="panel smartlog" id="smart-log-wrap-exec">
+        <summary>📜 smart 端调用日志（实时：审核/修正指令等调用的原始输出）</summary>
+        <pre id="smart-log-exec" class="log"></pre>
+      </details>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
