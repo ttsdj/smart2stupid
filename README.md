@@ -73,7 +73,10 @@ npm run build
 npm ci --prefix .\vscode-extension
 npm run compile --prefix .\vscode-extension
 npm run package --prefix .\vscode-extension
-code --install-extension .\vscode-extension\smart2stupid-ui-*.vsix --force
+$latestVsix = Get-ChildItem '.\vscode-extension\smart2stupid-ui-*.vsix' |
+  Sort-Object LastWriteTime |
+  Select-Object -Last 1
+code --install-extension $latestVsix.FullName --force
 ```
 
 安装后在 VS Code 命令面板执行 `Developer: Reload Window`。
