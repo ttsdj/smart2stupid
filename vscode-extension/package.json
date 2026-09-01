@@ -2,26 +2,80 @@
   "name": "smart2stupid-ui",
   "displayName": "smart2stupid",
   "description": "Codex 负责策划和审核，Claude Code 负责执行；VS Code 内结构化实时展示，无需 Web UI",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "publisher": "local",
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
-  "activationEvents": ["onStartupFinished"],
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
-  "files": ["dist/**", "README.md"],
+  "files": [
+    "dist/**",
+    "media/**",
+    "README.md"
+  ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "smart2stupid",
+          "title": "smart2stupid",
+          "icon": "media/smart2stupid.svg"
+        }
+      ]
+    },
+    "views": {
+      "smart2stupid": [
+        {
+          "type": "webview",
+          "id": "smart2stupid.executionView",
+          "name": "Claude 执行"
+        }
+      ]
+    },
     "commands": [
-      { "command": "smart2stupid.open", "title": "smart2stupid: 打开 Claude 结构化执行面板" },
-      { "command": "smart2stupid.stopExecution", "title": "smart2stupid: 停止当前 Claude 执行" },
-      { "command": "smart2stupid.openClaudeSession", "title": "smart2stupid: 在 Claude Code 中打开当前会话" },
-      { "command": "smart2stupid.newClaudeSession", "title": "smart2stupid: 下一轮新建 Claude 会话" },
-      { "command": "smart2stupid.extendIteration", "title": "smart2stupid: 追加一轮执行" },
-      { "command": "smart2stupid.legacyStart", "title": "smart2stupid: 启动旧版 Web UI（备用）" },
-      { "command": "smart2stupid.legacyOpen", "title": "smart2stupid: 打开旧版 Web UI（备用）" },
-      { "command": "smart2stupid.legacyStop", "title": "smart2stupid: 停止旧版 Web UI" }
+      {
+        "command": "smart2stupid.open",
+        "title": "smart2stupid: 打开左侧执行视图"
+      },
+      {
+        "command": "smart2stupid.openEditor",
+        "title": "smart2stupid: 在编辑区展开执行面板"
+      },
+      {
+        "command": "smart2stupid.stopExecution",
+        "title": "smart2stupid: 停止当前 Claude 执行"
+      },
+      {
+        "command": "smart2stupid.openClaudeSession",
+        "title": "smart2stupid: 在 Claude Code 中打开当前会话"
+      },
+      {
+        "command": "smart2stupid.newClaudeSession",
+        "title": "smart2stupid: 下一轮新建 Claude 会话"
+      },
+      {
+        "command": "smart2stupid.extendIteration",
+        "title": "smart2stupid: 追加一轮执行"
+      },
+      {
+        "command": "smart2stupid.legacyStart",
+        "title": "smart2stupid: 启动旧版 Web UI（备用）"
+      },
+      {
+        "command": "smart2stupid.legacyOpen",
+        "title": "smart2stupid: 打开旧版 Web UI（备用）"
+      },
+      {
+        "command": "smart2stupid.legacyStop",
+        "title": "smart2stupid: 停止旧版 Web UI"
+      }
     ],
     "configuration": {
       "title": "smart2stupid",
@@ -49,7 +103,7 @@
         "smart2stupid.autoOpenExecutionPanel": {
           "type": "boolean",
           "default": true,
-          "description": "检测到 $smart2stupid 启动 Claude 后，自动在主编辑区打开结构化执行面板"
+          "description": "检测到 $smart2stupid 启动 Claude 后，自动打开左侧结构化执行视图"
         },
         "smart2stupid.pollIntervalMs": {
           "type": "number",
@@ -67,7 +121,7 @@
   "devDependencies": {
     "@types/node": "^20.14.0",
     "@types/vscode": "^1.85.0",
-    "typescript": "^5.5.0",
-    "@vscode/vsce": "^3.0.0"
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.5.0"
   }
 }

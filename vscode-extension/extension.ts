@@ -14,7 +14,28 @@ interface DelegationIteration {
   claudeSessionId?: string;
   changesPath?: string;
   resultSummary?: string;
+  executorUsage?: TokenUsage;
   review?: { verdict: string; path: string; recordedAt: string };
+}
+
+interface ModelTokenUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+  costUsd?: number;
+}
+
+interface TokenUsage {
+  provider: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+  totalTokens: number;
+  costUsd?: number;
+  models?: ModelTokenUsage[];
 }
 
 interface DelegationState {
@@ -50,6 +71,7 @@ interface PanelPayload {
 let statusBar: vscode.StatusBarItem;
 let output: vscode.OutputChannel;
 let executionPanel: vscode.WebviewPanel | null = null;
+let executionView: vscode.WebviewView | null = null;
 let legacyPanel: vscode.WebviewPanel | null = null;
 let activeState: ActiveState | null = null;
 let lastSignature = '';
@@ -181,15 +203,27 @@ function executionHtml(): string {
   .event details summary { cursor: pointer; color: var(--vscode-textLink-foreground); }
   .event details pre { padding: 8px 0 0; }
   .changes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .usage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .usage-card { padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; min-width: 0; }
+  .usage-value { display: block; font-size: 18px; font-weight: 650; }
+  .usage-label { color: var(--vscode-descriptionForeground); font-size: 11px; }
   .change { padding: 10px; border: 1px solid var(--vscode-panel-border); border-radius: 5px; min-width: 0; }
   .change strong { display: block; margin-bottom: 5px; }
   .change div { overflow-wrap: anywhere; font-family: var(--vscode-editor-font-family); font-size: 12px; }
   .empty { color: var(--vscode-descriptionForeground); padding: 18px 0; }
+  @media (max-width: 520px) {
+    body { padding: 12px 10px 36px; }
+    header { position: static; margin: -12px -10px 12px; padding: 10px; }
+    .top { display: block; }
+    .actions { margin-top: 10px; justify-content: flex-start; }
+    .changes, .usage { grid-template-columns: 1fr; }
+  }
 </style></head><body>
 <header><div class="top"><div><h1 id="title">smart2stupid</h1><div class="meta"><span id="phase" class="badge">idle</span> <span id="meta"></span></div></div>
-<div class="actions"><button id="stop" class="danger">停止 Claude</button><button id="openClaude">在 Claude Code 中打开</button><button id="newSession" class="secondary">下轮新开会话</button><button id="extend" class="secondary">追加一轮</button></div></div></header>
+<div class="actions"><button id="stop" class="danger">停止 Claude</button><button id="openClaude">在 Claude Code 中打开</button><button id="openEditor" class="secondary">在编辑区展开</button><button id="newSession" class="secondary">下轮新开会话</button><button id="extend" class="secondary">追加一轮</button></div></div></header>
 <div id="empty" class="empty">等待 Codex 通过 $smart2stupid 派发任务。</div>
 <main id="main" hidden>
+  <h2>本轮 Token</h2><div id="usage" class="usage"></div>
   <details class="section" open><summary>收到的完整指令</summary><pre id="handoff"></pre></details>
   <h2>Claude 实时执行</h2><div id="timeline"></div>
   <h2>本轮文件变化</h2><div id="changes" class="changes"></div>
@@ -198,7 +232,7 @@ function executionHtml(): string {
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const el = (id) => document.getElementById(id);
-  ['stop','openClaude','newSession','extend'].forEach(id => el(id).addEventListener('click', () => vscode.postMessage({ command: id })));
+  ['stop','openClaude','openEditor','newSession','extend'].forEach(id => el(id).addEventListener('click', () => vscode.postMessage({ command: id })));
   function stringify(value) { return typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
   function addEvent(kind, label, content, details) {
     const card = document.createElement('div'); card.className = 'event ' + kind;
@@ -232,16 +266,56 @@ function executionHtml(): string {
       root.appendChild(box);
     }
   }
+  function renderUsage(usage) {
+    const root = el('usage'); root.replaceChildren();
+    const values = usage ? [
+      ['总计', Number(usage.totalTokens || 0).toLocaleString()],
+      ['普通输入', Number(usage.inputTokens || 0).toLocaleString()],
+      ['输出', Number(usage.outputTokens || 0).toLocaleString()],
+      ['缓存输入', Number(usage.cacheReadInputTokens || 0).toLocaleString()],
+      ['缓存写入', Number(usage.cacheCreationInputTokens || 0).toLocaleString()],
+      ['费用', usage.costUsd === undefined ? '未提供' : '$' + Number(usage.costUsd).toFixed(6)],
+    ] : [['执行端', '等待 Claude 返回 usage']];
+    for (const [label,value] of values) {
+      const card = document.createElement('div'); card.className = 'usage-card';
+      const val = document.createElement('span'); val.className = 'usage-value'; val.textContent = value;
+      const lab = document.createElement('span'); lab.className = 'usage-label'; lab.textContent = label;
+      card.append(val,lab); root.appendChild(card);
+    }
+    if (Array.isArray(usage?.models) && usage.models.length) {
+      const card = document.createElement('div'); card.className = 'usage-card'; card.style.gridColumn = '1 / -1';
+      const lab = document.createElement('span'); lab.className = 'usage-label'; lab.textContent = '分模型明细'; card.appendChild(lab);
+      for (const model of usage.models) { const row = document.createElement('div'); row.textContent = model.model + ': ' + Number(model.inputTokens + model.cacheReadInputTokens + model.cacheCreationInputTokens + model.outputTokens).toLocaleString() + ' tokens'; card.appendChild(row); }
+      root.appendChild(card);
+    }
+  }
   window.addEventListener('message', ({ data }) => {
     if (!data?.state) return;
     const state = data.state; el('empty').hidden = true; el('main').hidden = false;
     el('title').textContent = state.title || state.taskId; el('phase').textContent = state.phase;
     const iteration = state.iterations?.length || 0; el('meta').textContent = state.taskId + ' · Claude ' + state.model + ' · 第 ' + iteration + '/' + (state.maxIterations + state.extraIterations) + ' 轮';
+    const current = state.iterations?.[state.iterations.length - 1]; renderUsage(current?.executorUsage);
     el('handoff').textContent = data.handoff || '尚无 handoff'; renderEvents(data.events || []); renderChanges(data.changes || {});
     el('review').textContent = data.review || '尚未审核'; el('reviewBox').open = Boolean(data.review);
     const running = state.phase === 'running' || state.phase === 'queued'; el('stop').hidden = !running; el('newSession').hidden = running; el('extend').hidden = running; el('openClaude').hidden = !state.claudeSessionId || state.sessionEstablished !== true;
   });
 </script></body></html>`;
+}
+
+class ExecutionViewProvider implements vscode.WebviewViewProvider {
+  resolveWebviewView(view: vscode.WebviewView): void {
+    executionView = view;
+    view.webview.options = { enableScripts: true };
+    view.webview.html = executionHtml();
+    view.webview.onDidReceiveMessage((message) => void handlePanelMessage(message));
+    view.onDidDispose(() => { if (executionView === view) executionView = null; });
+    if (activeState) void view.webview.postMessage(payloadFor(activeState.state));
+  }
+}
+
+async function showExecutionView(): Promise<void> {
+  await vscode.commands.executeCommand('smart2stupid.executionView.focus');
+  if (executionView && activeState) void executionView.webview.postMessage(payloadFor(activeState.state));
 }
 
 function ensureExecutionPanel(preserveFocus = true): vscode.WebviewPanel {
@@ -295,6 +369,8 @@ async function handlePanelMessage(message: { command?: string }): Promise<void> 
       output.appendLine(`[openClaude] ${detail}`);
       void vscode.window.showErrorMessage(`无法在 Claude Code 中打开会话：${detail}`);
     }
+  } else if (message.command === 'openEditor') {
+    ensureExecutionPanel(false);
   } else if (message.command === 'newSession') {
     state.newSessionNext = true;
     state.updatedAt = new Date().toISOString();
@@ -318,10 +394,11 @@ function refreshExecutionState(): void {
   if (signature === lastSignature) return;
   lastSignature = signature;
   if (executionPanel) void executionPanel.webview.postMessage(payload);
+  if (executionView) void executionView.webview.postMessage(payload);
   const runKey = `${found.state.taskId}:${found.state.iterations.length}`;
   if (cfg<boolean>('autoOpenExecutionPanel', true) && lastAutoOpenedRun !== runKey) {
     lastAutoOpenedRun = runKey;
-    ensureExecutionPanel(true);
+    void showExecutionView();
   }
 }
 
@@ -375,7 +452,11 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     output,
     statusBar,
-    vscode.commands.registerCommand('smart2stupid.open', () => ensureExecutionPanel(false)),
+    vscode.window.registerWebviewViewProvider('smart2stupid.executionView', new ExecutionViewProvider(), {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.commands.registerCommand('smart2stupid.open', () => void showExecutionView()),
+    vscode.commands.registerCommand('smart2stupid.openEditor', () => ensureExecutionPanel(false)),
     vscode.commands.registerCommand('smart2stupid.stopExecution', () => void handlePanelMessage({ command: 'stop' })),
     vscode.commands.registerCommand('smart2stupid.openClaudeSession', () => void handlePanelMessage({ command: 'openClaude' })),
     vscode.commands.registerCommand('smart2stupid.newClaudeSession', () => void handlePanelMessage({ command: 'newSession' })),

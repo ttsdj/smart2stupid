@@ -237,6 +237,10 @@ async function run(options: Record<string, string | boolean>): Promise<number> {
       const line = eventLine(event);
       if (line) console.log(line);
       if (event.type === 'result') result = event.text;
+      if (event.type === 'usage') {
+        state.iterations.at(-1)!.executorUsage = event.usage;
+        saveState(state);
+      }
       const meta = event.type === 'meta' && event.data && typeof event.data === 'object'
         ? event.data as Record<string, unknown>
         : undefined;

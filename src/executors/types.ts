@@ -1,5 +1,25 @@
 export type ExecStatus = 'starting' | 'running' | 'completed' | 'failed' | 'cancelled' | 'timeout';
 
+export interface ModelTokenUsage {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+  costUsd?: number;
+}
+
+export interface TokenUsage {
+  provider: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadInputTokens: number;
+  cacheCreationInputTokens: number;
+  totalTokens: number;
+  costUsd?: number;
+  models?: ModelTokenUsage[];
+}
+
 export type ExecEvent =
   | { type: 'status'; status: ExecStatus; exitCode?: number; message?: string }
   | { type: 'stdout'; text: string; partial?: boolean }
@@ -7,6 +27,7 @@ export type ExecEvent =
   | { type: 'tool_use'; tool: string; input?: unknown; partial?: boolean }
   | { type: 'tool_result'; toolUseId?: string; content: unknown; isError?: boolean }
   | { type: 'result'; text: string }
+  | { type: 'usage'; usage: TokenUsage }
   | { type: 'meta'; data: unknown };
 
 export interface ExecRequest {

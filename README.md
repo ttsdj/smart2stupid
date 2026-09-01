@@ -2,7 +2,7 @@
 
 > Codex 负责想清楚，Claude Code 负责把事情做完。
 
-smart2stupid 是一套 VS Code 内的双 Agent 开发工作流：右侧使用官方 Codex 对话完成需求澄清、任务 brief 和结果审核；左侧使用结构化执行面板展示 Claude Code 收到的完整指令、回复、工具调用、命令、文件变化、测试、错误与状态。
+smart2stupid 是一套 VS Code 内的双 Agent 开发工作流：右侧使用官方 Codex 对话完成需求澄清、任务 brief 和结果审核；VS Code 左侧 Activity Bar 提供独立入口，结构化展示 Claude Code 收到的完整指令、回复、工具调用、命令、文件变化、测试、错误、token 用量与状态。
 
 正常工作流不启动 Web UI、不弹出浏览器，也不需要人工复制粘贴 Codex 与 Claude 之间的消息。
 
@@ -10,6 +10,7 @@ smart2stupid 是一套 VS Code 内的双 Agent 开发工作流：右侧使用官
 
 - **严格分工**：Codex 是需求负责人和审核者，Claude Code 是唯一实施者。
 - **完整可见**：Claude 的 handoff、工具调用、命令、结果、错误和变更实时写入 VS Code 面板。
+- **Token 审计**：Claude 返回的总输入、输出、缓存输入、费用和分模型明细随轮次落盘并显示。
 - **持久会话**：首轮创建官方 Claude session，修正轮默认使用同一个 session 继续执行。
 - **自动闭环**：用户确认一次 brief；之后 Codex 审核，不通过则自动发送最小修正指令，默认最多 3 轮。
 - **高权限执行**：Claude 使用 `bypassPermissions` 自动完成写文件、运行命令、安装依赖、测试等工作。
@@ -106,7 +107,7 @@ $smart2stupid 为当前项目增加用户登录功能，先和我确认数据结
 1. Codex 读取当前工作区与项目说明。
 2. Codex 以设计树形式集中追问尚未明确的产品决策，并给出推荐答案。
 3. Codex 展示完整六节 brief，请求一次明确确认。
-4. 确认后，Codex 启动 delegate；VS Code 左侧自动打开 Claude 结构化执行面板。
+4. 确认后，Codex 启动 delegate；VS Code 左侧 Activity Bar 的 smart2stupid 入口自动获得焦点并显示 Claude 实时执行。
 5. Claude 独立执行，Codex 不在本轮中途干预。
 6. Claude 结束后，Codex 检查基线差异、Git diff、源码和测试，并记录通过或修正意见。
 
@@ -114,14 +115,23 @@ $smart2stupid 为当前项目增加用户登录功能，先和我确认数据结
 
 - 停止当前 Claude 执行
 - 在官方 Claude Code 扩展中打开已建立的 session
+- 在编辑区展开完整执行面板
 - 让下一轮创建新 session
 - 在默认 3 轮之外追加一轮
 
 如果自动面板没有出现，可运行：
 
 ```text
-smart2stupid: 打开 Claude 结构化执行面板
+smart2stupid: 打开左侧执行视图
 ```
+
+也可以直接点击 VS Code 左侧 Activity Bar 中的 smart2stupid 星形执行图标。
+
+## Token 统计口径
+
+Claude 执行端的 `result.usage` 与 `result.modelUsage` 会写入当前轮次的 `delegate-state.json`，并在左侧视图中展示。若运行时使用辅助模型，总数按所有 `modelUsage` 条目汇总，分模型数据仍完整保留。按 Anthropic 的 usage 口径，总处理量为普通输入、缓存读取、缓存写入和输出四项之和；UI 会将它们分开显示。
+
+原生 Codex VS Code 对话目前没有被本扩展拦截，因此不会伪造“当前聊天”的精确 token。做可复现的 smart 端基准时，可使用 `codex exec --json --ephemeral`，读取末尾 `turn.completed.usage`；OpenAI Responses API 接入则应读取响应对象的 `usage` 字段。
 
 ## Claude 执行权限
 
@@ -229,7 +239,7 @@ npm run build
 npm run compile --prefix .\vscode-extension
 ```
 
-测试覆盖脱敏、命令模板、全权限 deny 参数、Claude stream-json 事件、工具结果、错误展示以及 session 建立/恢复选择。
+测试覆盖脱敏、命令模板、全权限 deny 参数、Claude stream-json 事件、跨模型 token 汇总、工具结果、错误展示以及 session 建立/恢复选择。
 
 ## 项目目录
 

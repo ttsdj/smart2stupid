@@ -77,6 +77,38 @@ test('surfaces Claude result errors in the structured panel', () => {
   ]);
 });
 
+test('captures complete Claude token usage including auxiliary models', () => {
+  const events = parseStreamJsonLine(JSON.stringify({
+    type: 'result',
+    result: 'done',
+    total_cost_usd: 0.03,
+    usage: { input_tokens: 100, output_tokens: 20, cache_read_input_tokens: 80 },
+    modelUsage: {
+      'claude-haiku': { inputTokens: 100, outputTokens: 20, cacheReadInputTokens: 80, cacheCreationInputTokens: 0, costUSD: 0.02 },
+      helper: { inputTokens: 10, outputTokens: 5, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUSD: 0.01 },
+    },
+  }));
+  assert.deepEqual(events, [
+    { type: 'result', text: 'done' },
+    {
+      type: 'usage',
+      usage: {
+        provider: 'claude',
+        inputTokens: 110,
+        outputTokens: 25,
+        cacheReadInputTokens: 80,
+        cacheCreationInputTokens: 0,
+        totalTokens: 215,
+        costUsd: 0.03,
+        models: [
+          { model: 'claude-haiku', inputTokens: 100, outputTokens: 20, cacheReadInputTokens: 80, cacheCreationInputTokens: 0, costUsd: 0.02 },
+          { model: 'helper', inputTokens: 10, outputTokens: 5, cacheReadInputTokens: 0, cacheCreationInputTokens: 0, costUsd: 0.01 },
+        ],
+      },
+    },
+  ]);
+});
+
 test('never resumes a Claude session that did not reach init', () => {
   assert.deepEqual(
     selectClaudeSession('uncreated-id', false, false, () => 'fresh-id'),

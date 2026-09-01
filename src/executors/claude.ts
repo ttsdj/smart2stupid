@@ -66,6 +66,44 @@ export function parseStreamJsonLine(line: string): ExecEvent[] {
   if (type === 'result') {
     const out: ExecEvent[] = [];
     if (typeof obj.result === 'string' && obj.result) out.push({ type: 'result', text: obj.result });
+    const rawModelUsage = obj.modelUsage && typeof obj.modelUsage === 'object'
+      ? obj.modelUsage as Record<string, Record<string, unknown>>
+      : undefined;
+    const numberValue = (value: unknown): number => typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    const models = rawModelUsage
+      ? Object.entries(rawModelUsage).map(([model, usage]) => ({
+          model,
+          inputTokens: numberValue(usage.inputTokens),
+          outputTokens: numberValue(usage.outputTokens),
+          cacheReadInputTokens: numberValue(usage.cacheReadInputTokens),
+          cacheCreationInputTokens: numberValue(usage.cacheCreationInputTokens),
+          costUsd: typeof usage.costUSD === 'number' ? usage.costUSD : undefined,
+        }))
+      : [];
+    const rawUsage = obj.usage && typeof obj.usage === 'object'
+      ? obj.usage as Record<string, unknown>
+      : undefined;
+    if (rawUsage || models.length > 0) {
+      const sum = (key: 'inputTokens' | 'outputTokens' | 'cacheReadInputTokens' | 'cacheCreationInputTokens'): number =>
+        models.reduce((total, usage) => total + usage[key], 0);
+      const inputTokens = models.length > 0 ? sum('inputTokens') : numberValue(rawUsage?.input_tokens);
+      const outputTokens = models.length > 0 ? sum('outputTokens') : numberValue(rawUsage?.output_tokens);
+      const cacheReadInputTokens = models.length > 0 ? sum('cacheReadInputTokens') : numberValue(rawUsage?.cache_read_input_tokens);
+      const cacheCreationInputTokens = models.length > 0 ? sum('cacheCreationInputTokens') : numberValue(rawUsage?.cache_creation_input_tokens);
+      out.push({
+        type: 'usage',
+        usage: {
+          provider: 'claude',
+          inputTokens,
+          outputTokens,
+          cacheReadInputTokens,
+          cacheCreationInputTokens,
+          totalTokens: inputTokens + cacheReadInputTokens + cacheCreationInputTokens + outputTokens,
+          costUsd: typeof obj.total_cost_usd === 'number' ? obj.total_cost_usd : undefined,
+          models: models.length > 0 ? models : undefined,
+        },
+      });
+    }
     const errors = Array.isArray(obj.errors)
       ? obj.errors.filter((error): error is string => typeof error === 'string' && error.length > 0)
       : [];

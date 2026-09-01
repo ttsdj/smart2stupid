@@ -1,4 +1,4 @@
-import type { ExecStatus } from '../executors/types.js';
+import type { ExecStatus, TokenUsage } from '../executors/types.js';
 
 export type DelegationPhase =
   | 'queued'
@@ -19,6 +19,7 @@ export interface DelegationIteration {
   claudeSessionId?: string;
   changesPath?: string;
   resultSummary?: string;
+  executorUsage?: TokenUsage;
   review?: {
     verdict: 'pass' | 'partial' | 'fail';
     path: string;
