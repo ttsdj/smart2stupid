@@ -1,5 +1,7 @@
 # smart2stupid
 
+![smart2stupid 架构总览](docs/architecture.png)
+
 > Codex 负责想清楚，Claude Code 负责把事情做完。
 
 smart2stupid 是一套 VS Code 内的双 Agent 开发工作流：右侧使用官方 Codex 对话完成需求澄清、任务 brief 和结果审核；VS Code 左侧 Activity Bar 提供独立入口，结构化展示 Claude Code 收到的完整指令、回复、工具调用、命令、文件变化、测试、错误、token 用量与状态。
